@@ -1,0 +1,52 @@
+```yaml
+version: '3'
+
+services:
+  # 1. The Core Proxy Daemon
+  guacd:
+    image: guacamole/guacd
+    container_name: guacd_daemon
+    restart: always
+    networks:
+      - guac_net
+
+  # 2. Database Backend
+  postgres:
+    image: postgres:13
+    container_name: guac_postgres
+    environment:
+      POSTGRES_USER: guacamole_user
+      POSTGRES_PASSWORD: secure_password_123
+      POSTGRES_DB: guacamole_db
+    restart: always
+    volumes:
+      - ./initdb.sql:/docker-entrypoint-initdb.d/initdb.sql
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - guac_net
+
+  # 3. Web Frontend (Tomcat)
+  guacamole:
+    image: guacamole/guacamole
+    container_name: guacamole_web
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      GUACD_HOSTNAME: guacd
+      POSTGRES_HOSTNAME: postgres
+      POSTGRES_DATABASE: guacamole_db
+      POSTGRES_USER: guacamole_user
+      POSTGRES_PASSWORD: secure_password_123
+    depends_on:
+      - guacd
+      - postgres
+    networks:
+      - guac_net
+
+networks:
+  guac_net:
+    driver: bridge
+
+volumes:
+  pg_data:
